@@ -1,0 +1,6 @@
+{
+  "name": "에세이 암기 학습기",
+  "description": "문장별로 작성된 에세이를 한국어 번안과 카드 학습을 통하여 효율적으로 외울 수 있게 돕고, 구글 스프레드시트 및 Gemini 인공지능 번역과 유기적으로 작동하는 자가 학습용 어플리케이션입니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
