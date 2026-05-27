@@ -847,40 +847,45 @@ export default function App() {
               </div>
 
               {/* Confidence Tuning Area */}
-              <div className="border border-indigo-50/50 bg-indigo-50/10 p-5 rounded-2xl space-y-3.5">
-                <h3 className="text-xs font-bold text-slate-700 flex items-center font-display uppercase tracking-wider">
-                  <Award className="w-4 h-4 text-indigo-500 mr-1.5" />
-                  Confidence Score Tuning
-                </h3>
-                
-                <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-3xs">
-                  <span className="text-[10px] text-slate-450 uppercase font-black tracking-widest font-display">CURRENT VALUE :</span>
-                  <span className={`text-xs font-black font-mono px-3 py-1 rounded-lg ${
+              <div className="border border-slate-100 bg-slate-50/50 p-4 rounded-2xl flex items-center justify-between shadow-3xs">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-bold text-slate-800 font-display uppercase tracking-wider">에세이 자신감 조절</span>
+                    <span className="block text-[10.5px] text-slate-450 font-medium">이 에세이의 성취 점수를 조정할 수 있습니다.</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 shrink-0">
+                  <span className={`text-[11px] font-black font-mono px-2.5 py-1 rounded-lg border ${
                     activeEssay.confidence < 0 
-                      ? "text-rose-600 bg-rose-50 border border-rose-150" 
+                      ? "text-rose-600 bg-rose-50/50 border-rose-150" 
                       : activeEssay.confidence > 0
-                        ? "text-emerald-600 bg-emerald-50 border border-emerald-150"
-                        : "text-slate-500 bg-slate-50 border border-slate-200"
+                        ? "text-emerald-600 bg-emerald-50/50 border-emerald-150"
+                        : "text-slate-500 bg-slate-50 border-slate-200"
                   }`}>
                     {activeEssay.confidence > 0 ? `+${activeEssay.confidence}` : activeEssay.confidence}
                   </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => adjustEssayConfidence(-1)}
-                    className="py-3 px-4 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-250 text-rose-600 text-[10.5px] font-black uppercase tracking-widest rounded-xl transition flex items-center justify-center space-x-1 cursor-pointer font-display shadow-2xs"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                    <span>DOWN (-1)</span>
-                  </button>
-                  <button
-                    onClick={() => adjustEssayConfidence(1)}
-                    className="py-3 px-4 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-250 text-emerald-600 text-[10.5px] font-black uppercase tracking-widest rounded-xl transition flex items-center justify-center space-x-1 cursor-pointer font-display shadow-2xs"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                    <span>UP (+1)</span>
-                  </button>
+                  
+                  <div className="flex items-center border border-slate-200 bg-white rounded-xl p-0.5 shadow-4xs">
+                    <button
+                      onClick={() => adjustEssayConfidence(-1)}
+                      className="p-1.5 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                      title="점수 내리기 (-1)"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-slate-200 mx-0.5" />
+                    <button
+                      onClick={() => adjustEssayConfidence(1)}
+                      className="p-1.5 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer"
+                      title="점수 올리기 (+1)"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -972,9 +977,7 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4 pt-4 relative z-10 flex-1 flex flex-col justify-center">
-                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest block text-center mb-2 font-display">
-                    한국어 해석을 보고 연상되는 영어 구문을 생각해보세요
-                  </span>
+
                   
                   {/* Central Korean Meaning typography */}
                   <h3 className="text-lg font-bold text-slate-800 text-center leading-relaxed max-w-sm mx-auto select-all">
@@ -1001,7 +1004,7 @@ export default function App() {
                       className="w-full py-4 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-100/70 hover:text-indigo-700 border border-indigo-100 rounded-2xl transition cursor-pointer flex items-center justify-center space-x-1.5 shadow-2xs font-display"
                     >
                       <Eye className="w-4 h-4" />
-                      <span>SHOW ENGLISH TRANSLATION</span>
+                      <span>영문장 보기</span>
                     </button>
                   )}
 
@@ -1087,16 +1090,7 @@ export default function App() {
               )}
             </div>
 
-            {/* Interactive instructions helper cards */}
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl text-slate-100 flex items-start space-x-4">
-              <HelpCircle className="w-6 h-6 text-indigo-405 shrink-0 select-none animate-pulse" />
-              <div className="space-y-1">
-                <h5 className="font-extrabold text-xs text-slate-200 font-display uppercase tracking-wider">Self-Diagnostic Learning Tip</h5>
-                <p className="text-[10.5px] text-slate-400 leading-relaxed font-medium">
-                  한글 해석을 본 뒤 영문 구문 구조를 머릿속으로 소리 내어 말해보세요. 이후 <span className="text-indigo-300 font-bold">정답 영어</span>를 확인하여, 틀린 전치사나 수식어가 있었다면 <strong>DOWN</strong>을, 완벽하게 연상했다면 <strong>UP</strong>을 선택하여 취약점을 점검해 나가세요!
-                </p>
-              </div>
-            </div>
+
 
           </div>
         )}
