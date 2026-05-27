@@ -154,7 +154,7 @@ export default function DatabaseSettings({ onClose, onSyncComplete }: DatabaseSe
             <input
               type="url"
               className="w-full text-xs p-3.5 bg-slate-50 hover:bg-slate-100/50 focus:bg-white border border-slate-200 focus:border-indigo-500 outline-hidden rounded-2xl text-slate-700 font-mono transition-all"
-              placeholder="https://script.google.com/macros/s/.../exec"
+              placeholder="https://script.google.com/macros/s/AKfycbz-sOYcsMIsCgD-wbOzauiKyVskkDwfmU15SxPMZs7RjGDiD3kySMNDnneSPtS_VAt9oQ/exec"
               value={config.gasUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
             />

@@ -118,9 +118,12 @@ export default function App() {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (essay) =>
-          essay.title.toLowerCase().includes(query) ||
-          essay.memo.toLowerCase().includes(query) ||
-          essay.sentences.some(s => s.ko.toLowerCase().includes(query) || s.en.toLowerCase().includes(query))
+          (essay.title || "").toLowerCase().includes(query) ||
+          (essay.memo || "").toLowerCase().includes(query) ||
+          (essay.sentences || []).some(s => 
+            (s.ko || "").toLowerCase().includes(query) || 
+            (s.en || "").toLowerCase().includes(query)
+          )
       );
     }
 
@@ -128,10 +131,10 @@ export default function App() {
     if (filterType === "favorites") {
       result = result.filter((e) => e.isFavorite);
     } else if (filterType === "lowestConfidence") {
-      result = result.sort((a, b) => a.confidence - b.confidence);
+      result = result.sort((a, b) => (a.confidence || 0) - (b.confidence || 0));
     } else {
       // default: newest creation date first
-      result = result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      result = result.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     }
 
     return result;
@@ -181,11 +184,11 @@ export default function App() {
   const navigateToEdit = (essay: Essay) => {
     setIsEditingExisting(true);
     setEditingEssayId(essay.id);
-    setWriteTitle(essay.title);
-    setWriteMemo(essay.memo);
-    setKoreanInputs(essay.sentences.map(s => s.ko));
-    setEnglishSentences(essay.sentences.map(s => s.en));
-    setSentenceConfidenceList(essay.sentences.map(s => s.confidence));
+    setWriteTitle(essay.title || "");
+    setWriteMemo(essay.memo || "");
+    setKoreanInputs((essay.sentences || []).map(s => s.ko || ""));
+    setEnglishSentences((essay.sentences || []).map(s => s.en || ""));
+    setSentenceConfidenceList((essay.sentences || []).map(s => s.confidence || 0));
     setTranslateStatus("idle");
     setTranslateError("");
     setCurrentView("write");
@@ -202,7 +205,7 @@ export default function App() {
     setSelectedEssayId(essay.id);
     setCurrentCardIndex(0);
     setCardRevealEnglish(false);
-    setCardConfidenceStates(essay.sentences.map(s => s.confidence));
+    setCardConfidenceStates((essay.sentences || []).map(s => s.confidence || 0));
     setCurrentView("memorize");
   };
 
@@ -227,6 +230,45 @@ export default function App() {
 
   const addSentenceInputRow = () => {
     setKoreanInputs([...koreanInputs, ""]);
+    if (englishSentences.length > 0) {
+      setEnglishSentences([...englishSentences, ""]);
+    }
+    if (sentenceConfidenceList.length > 0) {
+      setSentenceConfidenceList([...sentenceConfidenceList, 0]);
+    }
+  };
+
+  const handleKoreanInputEnter = (index: number) => {
+    const updatedKo = [...koreanInputs];
+    updatedKo.splice(index + 1, 0, "");
+    setKoreanInputs(updatedKo);
+
+    if (englishSentences.length > 0) {
+      const updatedEn = [...englishSentences];
+      while (updatedEn.length <= index) {
+        updatedEn.push("");
+      }
+      updatedEn.splice(index + 1, 0, "");
+      setEnglishSentences(updatedEn);
+    }
+
+    if (sentenceConfidenceList.length > 0) {
+      const updatedConf = [...sentenceConfidenceList];
+      while (updatedConf.length <= index) {
+        updatedConf.push(0);
+      }
+      updatedConf.splice(index + 1, 0, 0);
+      setSentenceConfidenceList(updatedConf);
+    }
+
+    // Wait for the new element to be rendered in the DOM, then focus
+    setTimeout(() => {
+      const nextInputId = `ko-input-field-${index + 1}`;
+      const nextInput = document.getElementById(nextInputId) as HTMLInputElement;
+      if (nextInput) {
+        nextInput.focus();
+      }
+    }, 50);
   };
 
   const removeSentenceInputRow = (index: number) => {
@@ -372,7 +414,7 @@ export default function App() {
 
   // Sentence level confidence adjuster in Memorize Card view
   const adjustCardConfidence = async (sentenceIndex: number, amount: number) => {
-    if (!activeEssay) return;
+    if (!activeEssay || !activeEssay.sentences || !activeEssay.sentences[sentenceIndex]) return;
 
     const updatedSentences = [...activeEssay.sentences];
     const currentConf = updatedSentences[sentenceIndex].confidence || 0;
@@ -384,11 +426,12 @@ export default function App() {
     };
 
     // calculate total confidence (the user wants to manage overall average confidence)
-    const avgScore = Math.round(updatedSentences.reduce((sum, s) => sum + s.confidence, 0) / updatedSentences.length);
+    const totalCount = updatedSentences.length || 1;
+    const avgScore = Math.round(updatedSentences.reduce((sum, s) => sum + (s.confidence || 0), 0) / totalCount);
 
     // Sync locally
     setEssays(prev => prev.map(e => e.id === activeEssay.id ? { ...e, sentences: updatedSentences, confidence: avgScore } : e));
-    setCardConfidenceStates(updatedSentences.map(s => s.confidence));
+    setCardConfidenceStates(updatedSentences.map(s => s.confidence || 0));
 
     try {
       await updateEssay(activeEssay.id, { 
@@ -444,23 +487,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Apps Script Settings Box */}
-        {showSettings && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="w-full"
-          >
-            <DatabaseSettings
-              onClose={() => setShowSettings(false)}
-              onSyncComplete={() => {
-                setShowSettings(false);
-                loadDatabase();
-              }}
-            />
-          </motion.div>
-        )}
+
 
         {/* -------------------- VIEW 1: HOME VIEW -------------------- */}
         {currentView === "home" && (
@@ -476,8 +503,7 @@ export default function App() {
                   <Sparkles className="w-5 h-5 text-indigo-100 animate-pulse" />
                 </div>
                 <div className="space-y-0.5">
-                  <span className="block font-bold text-[14px] uppercase tracking-wider">Smart Study</span>
-                  <span className="block text-[10px] text-indigo-200">Confidence 취약순 자동 시작</span>
+                  <span className="block font-bold text-[14px] uppercase tracking-wider">랜덤 학습하기</span>
                 </div>
               </button>
 
@@ -489,8 +515,7 @@ export default function App() {
                   <Plus className="w-5 h-5" />
                 </div>
                 <div className="space-y-0.5">
-                  <span className="block font-bold text-[14px] text-slate-800 group-hover:text-indigo-600 transition uppercase tracking-wider">New Essay</span>
-                  <span className="block text-[10px] text-slate-400 font-sans">문장 입력 후 영문 자동 생성</span>
+                  <span className="block font-bold text-[14px] text-slate-800 group-hover:text-indigo-600 transition uppercase tracking-wider">새 에세이 쓰기</span>
                 </div>
               </button>
             </div>
@@ -547,7 +572,7 @@ export default function App() {
                   placeholder="제목, 내용, 키워드로 에세이 찾기..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-14 py-3.5 bg-white border border-slate-200 rounded-2xl text-xs placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 transition-all font-medium shadow-2xs"
+                  className="w-full pl-11 pr-14 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 transition-all font-semibold shadow-2xs"
                 />
                 {searchQuery && (
                   <button 
@@ -611,7 +636,7 @@ export default function App() {
                   placeholder="주제 또는 멋진 제목을 입력하세요 (미입력 시 문맥에 맞춰 자동 생성)"
                   value={writeTitle}
                   onChange={(e) => setWriteTitle(e.target.value)}
-                  className="w-full text-xs p-4 bg-slate-50 hover:bg-slate-100/40 focus:bg-white focus:border-indigo-550 border border-slate-200 outline-hidden rounded-2xl text-slate-800 font-bold transition-all placeholder-slate-400 shadow-3xs"
+                  className="w-full text-sm p-4 bg-slate-50 hover:bg-slate-100/40 focus:bg-white focus:border-indigo-550 border border-slate-200 outline-hidden rounded-2xl text-slate-800 font-bold transition-all placeholder-slate-400 shadow-3xs"
                 />
               </div>
 
@@ -634,7 +659,7 @@ export default function App() {
                 <div className="space-y-4">
                   {koreanInputs.map((val, idx) => (
                     <div key={`ko-input-${idx}`} className="space-y-1.5 animate-fadeIn">
-                      <div className="flex items-center justify-between text-[10px] font-black tracking-widest font-display text-slate-400 px-1">
+                      <div className="flex items-center justify-between text-[11px] font-black tracking-widest font-display text-slate-400 px-1">
                         <span>SENTENCE BLOCK {idx + 1}</span>
                         {koreanInputs.length > 1 && (
                           <button
@@ -648,22 +673,29 @@ export default function App() {
                       
                       {/* Korean box */}
                       <input
+                        id={`ko-input-field-${idx}`}
                         type="text"
                         placeholder="이곳에 한국어 문장을 소신껏 작성하세요."
                         value={val}
                         onChange={(e) => handleKoreanInputChange(idx, e.target.value)}
-                        className="w-full text-xs p-3.5 bg-slate-50 hover:bg-slate-100/30 focus:bg-white border border-slate-200 outline-none focus:border-indigo-500 rounded-xl text-slate-800 transition-all font-medium"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleKoreanInputEnter(idx);
+                          }
+                        }}
+                        className="w-full text-sm p-4 bg-slate-50 hover:bg-slate-100/30 focus:bg-white border border-slate-200 outline-none focus:border-indigo-500 rounded-xl text-slate-800 transition-all font-semibold"
                       />
 
                       {/* Aligned English box (Only visible after clicking Translate to English) */}
                       {englishSentences.length > idx && (
-                        <div className="mt-1.5 flex items-center space-x-2 pl-3 border-l-2 border-indigo-500">
+                        <div className="mt-2 flex items-center space-x-2 pl-3 border-l-3 border-indigo-500">
                           <input
                             type="text"
                             placeholder="생성된 영어 번역문 (직접 마이닝 수정 가능)"
                             value={englishSentences[idx]}
                             onChange={(e) => handleEnglishInputChange(idx, e.target.value)}
-                            className="w-full text-xs p-2 bg-indigo-50/20 border border-indigo-100 text-indigo-700 font-bold rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition-all"
+                            className="w-full text-sm p-3 bg-indigo-50/30 border border-indigo-100 text-indigo-800 font-bold rounded-xl outline-none focus:bg-white focus:border-indigo-500 transition-all"
                           />
                         </div>
                       )}
@@ -680,7 +712,7 @@ export default function App() {
                   rows={2}
                   value={writeMemo}
                   onChange={(e) => setWriteMemo(e.target.value)}
-                  className="w-full text-xs p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-505 outline-none rounded-2xl text-slate-800 leading-relaxed font-semibold transition-all shadow-3xs"
+                  className="w-full text-sm p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-505 outline-none rounded-2xl text-slate-800 leading-relaxed font-semibold transition-all shadow-3xs"
                 />
               </div>
 
@@ -871,13 +903,13 @@ export default function App() {
                       </div>
                       
                       {/* Korean version */}
-                      <p className="text-xs text-slate-800 font-semibold leading-relaxed">
+                      <p className="text-[14.5px] text-slate-800 font-semibold leading-relaxed">
                         {sent.ko}
                       </p>
 
                       {/* English version - depends on showEnglishInDetail toggler */}
                       {showEnglishInDetail && sent.en && (
-                        <p className="text-xs text-indigo-600 font-semibold leading-relaxed bg-indigo-50/30 p-3 rounded-xl border border-indigo-100/30">
+                        <p className="text-[15.5px] text-indigo-700 font-bold leading-relaxed bg-indigo-50/40 p-3.5 rounded-xl border border-indigo-100/30 shadow-3xs">
                           {sent.en}
                         </p>
                       )}
@@ -945,7 +977,7 @@ export default function App() {
                   </span>
                   
                   {/* Central Korean Meaning typography */}
-                  <h3 className="text-base font-bold text-slate-800 text-center leading-relaxed max-w-sm mx-auto select-all">
+                  <h3 className="text-lg font-bold text-slate-800 text-center leading-relaxed max-w-sm mx-auto select-all">
                     {activeEssay.sentences[currentCardIndex]?.ko}
                   </h3>
                 </div>
@@ -956,10 +988,10 @@ export default function App() {
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-indigo-50/50 border border-indigo-100 text-indigo-805 p-5 rounded-2xl flex flex-col items-center justify-center text-center space-y-1.5"
+                      className="bg-indigo-50 border border-indigo-150 text-indigo-950 p-5 rounded-2xl flex flex-col items-center justify-center text-center space-y-1.5 shadow-sm"
                     >
-                      <span className="text-[9px] uppercase font-black text-indigo-400 tracking-wider font-display">정답 영문장 (ANSWER)</span>
-                      <p className="text-xs font-black leading-relaxed select-all">
+                      <span className="text-[10px] uppercase font-black text-indigo-400 tracking-wider font-display">정답 영문장 (ANSWER)</span>
+                      <p className="text-[18px] font-extrabold text-indigo-900 tracking-wide leading-relaxed select-all">
                         {activeEssay.sentences[currentCardIndex]?.en || "생성된 영어 문장이 없습니다."}
                       </p>
                     </motion.div>

@@ -61,7 +61,7 @@ export const EssayCard: React.FC<EssayCardProps> = ({ essay, onSelect, onToggleF
             {essay.title}
           </h4>
 
-          <p className="text-xs text-slate-500 truncate line-clamp-1 italic font-medium">
+          <p className="text-sm text-slate-600 truncate line-clamp-1 italic font-medium">
             {essay.sentences.length > 0 ? essay.sentences[0].ko : "문장이 없습니다."}
           </p>
         </div>

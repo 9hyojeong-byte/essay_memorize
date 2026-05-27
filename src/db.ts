@@ -38,15 +38,23 @@ const DEFAULT_ESSAYS: Essay[] = [
 ];
 
 export function getGasConfig(): SyncConfig {
+  const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbz-sOYcsMIsCgD-wbOzauiKyVskkDwfmU15SxPMZs7RjGDiD3kySMNDnneSPtS_VAt9oQ/exec";
   const stored = localStorage.getItem(LOCAL_STORAGE_CONFIG_KEY);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === "object") {
+        if (!parsed.gasUrl) {
+          parsed.gasUrl = DEFAULT_GAS_URL;
+          parsed.useCloudDb = true;
+        }
+        return parsed;
+      }
     } catch {
       // Empty
     }
   }
-  return { gasUrl: "", useCloudDb: false };
+  return { gasUrl: DEFAULT_GAS_URL, useCloudDb: true };
 }
 
 export function saveGasConfig(config: SyncConfig): void {
@@ -54,13 +62,125 @@ export function saveGasConfig(config: SyncConfig): void {
 }
 
 // Local storage backup/helper
+export function normalizeGasEssay(raw: any): Essay {
+  if (!raw) {
+    return {
+      id: `essay_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      title: "제목 없음",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sentences: [],
+      memo: "",
+      isFavorite: false,
+      confidence: 0
+    };
+  }
+
+  // 1. ID
+  const id = raw.id || raw.ID || raw.Id || `essay_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+  // 2. Title
+  const title = raw.title || raw.Title || "제목 없음";
+
+  // 3. CreatedAt
+  const createdAt = raw.createdAt || raw.CreatedAt || new Date().toISOString();
+
+  // 4. UpdatedAt
+  // If KoreanSentences is a string and looks like a date (contains 'T' or 'Z'), it's actually the updatedAt field
+  let updatedAt = raw.updatedAt || raw.UpdatedAt || createdAt;
+  if (typeof raw.KoreanSentences === "string" && (raw.KoreanSentences.includes("T") || raw.KoreanSentences.includes("Z"))) {
+    updatedAt = raw.KoreanSentences;
+  }
+
+  // 5. Sentences
+  let sentencesRaw = raw.sentences;
+  if (raw.EnglishSentences !== undefined) {
+    sentencesRaw = raw.EnglishSentences;
+  } else if (raw.englishSentences !== undefined) {
+    sentencesRaw = raw.englishSentences;
+  }
+
+  let sentences: any[] = [];
+  if (sentencesRaw) {
+    if (Array.isArray(sentencesRaw)) {
+      sentences = sentencesRaw;
+    } else if (typeof sentencesRaw === "string") {
+      try {
+        sentences = JSON.parse(sentencesRaw);
+      } catch {
+        sentences = [];
+      }
+    }
+  }
+
+  // If still empty but KoreanSentences string looks like an array, try parsing it!
+  if (sentences.length === 0 && typeof raw.KoreanSentences === "string" && raw.KoreanSentences.trim().startsWith("[")) {
+    try {
+      sentences = JSON.parse(raw.KoreanSentences);
+    } catch {
+      sentences = [];
+    }
+  }
+
+  const formattedSentences = (Array.isArray(sentences) ? sentences : []).map((s: any) => ({
+    ko: s?.ko || s?.Korean || "",
+    en: s?.en || s?.English || "",
+    confidence: typeof s?.confidence === "number" ? s.confidence : 0
+  }));
+
+  // 6. Memo
+  const memo = raw.memo || raw.Memo || "";
+
+  // 7. IsFavorite & Confidence
+  let isFavorite = false;
+  let confidence = 0;
+
+  // Let's inspect 'isFavorite' (Standard, then uppercase)
+  if (raw.isFavorite !== undefined) {
+    isFavorite = raw.isFavorite === true || raw.isFavorite === "true";
+  } else if (raw.IsFavorite !== undefined) {
+    const val = raw.IsFavorite;
+    if (typeof val === "boolean" || val === "true" || val === "false" || val === "TRUE" || val === "FALSE") {
+      isFavorite = val === true || val === "true" || val === "TRUE";
+    } else {
+      confidence = Number(val) || 0;
+    }
+  }
+
+  // Let's inspect 'confidence' (Standard, then uppercase)
+  if (raw.confidence !== undefined) {
+    confidence = Number(raw.confidence) || 0;
+  } else if (raw.Confidence !== undefined) {
+    const val = raw.Confidence;
+    if (typeof val === "boolean" || val === "true" || val === "false" || val === "TRUE" || val === "FALSE") {
+      isFavorite = val === true || val === "true" || val === "TRUE";
+    } else {
+      confidence = Number(val) || 0;
+    }
+  }
+
+  return {
+    id,
+    title,
+    createdAt,
+    updatedAt,
+    sentences: formattedSentences,
+    memo,
+    isFavorite,
+    confidence
+  };
+}
+
 export function getLocalEssays(): Essay[] {
   const stored = localStorage.getItem(LOCAL_STORAGE_ESSAYS_KEY);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return parsed.map(normalizeGasEssay);
+      }
     } catch {
-      return DEFAULT_ESSAYS;
+      // ignore
     }
   }
   // Initialize with default
@@ -94,9 +214,10 @@ export async function getEssays(): Promise<{ essays: Essay[]; isCloud: boolean; 
 
       const resJson = await response.json();
       if (resJson.status === "success" && Array.isArray(resJson.data)) {
+        const normalized = resJson.data.map(normalizeGasEssay);
         // Sync local storage so user has mirror backup
-        saveLocalEssays(resJson.data);
-        return { essays: resJson.data, isCloud: true };
+        saveLocalEssays(normalized);
+        return { essays: normalized, isCloud: true };
       } else {
         throw new Error(resJson.message || "Failed to load spreadsheet data");
       }

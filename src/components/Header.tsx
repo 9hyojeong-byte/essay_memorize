@@ -56,26 +56,8 @@ export default function Header({ currentView, onBack, onOpenSettings, isCloudAct
           {getTitle()}
         </h1>
 
-        {/* Right Side: Database Config Toggle */}
-        <div className="flex items-center space-x-2.5">
-          {isCloudActive && (
-            <span className="flex h-2 w-2 relative" title="스프레드시트 실시간 동기화 활성화됨">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-          )}
-
-          <button
-            onClick={onOpenSettings}
-            className={`p-2.5 rounded-xl border transition-all duration-200 cursor-pointer ${
-              isCloudActive 
-                ? "bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100/80 hover:scale-105" 
-                : "bg-white border-slate-200 text-slate-400 hover:text-slate-800 hover:bg-slate-50"
-            } shadow-2xs`}
-            title="데이터베이스 연동 설정"
-          >
-            <Database className="w-4 h-4" />
-          </button>
+        {/* Right Side: Spacer/Empty Container to keep visual layout balanced */}
+        <div className="flex items-center space-x-2.5 w-10 justify-end">
         </div>
 
       </div>
